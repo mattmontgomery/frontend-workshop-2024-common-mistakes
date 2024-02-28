@@ -1,97 +1,87 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Counter from "./Counter";
-import { Configure } from "./Configure";
+import { Config, ConfigurationDisplay, Configure } from "./Configure";
 
 function Tricorder(props: any) {
-  const scanForLifeforms = useState<any>();
+  const [config, setConfig] = useState<Config>({});
+  const [isScanningForLifeForms, setIsScanningForLifeforms] =
+    useState<boolean>();
+  const [foundLifeforms, setFoundLifeForms] = useState<number[]>([]);
 
-  var isScanningForLifeForms = scanForLifeforms[0];
-  var setScanForLifeFormsToTrue = () => scanForLifeforms[1](true);
-  var setScanForLifeFormsToFalse = () => scanForLifeforms[1](false);
+  const intervalRef = useRef<NodeJS.Timeout>();
 
-  let [foundLifeforms, setFoundLifeForms] = useState<any>([]);
+  const soughtLifeformCount = 47;
 
   useEffect(() => {
-    setInterval(() => {
-      foundLifeforms.push(Math.random());
-    }, 1000);
-  });
+    const multipliers =
+      (config.antimatter ? 0.5 : 1) *
+      (config.slingshot ? 0.5 : 1) *
+      (config.stembolts ? 0.5 : 1);
+    const interval = setInterval(() => {
+      if (isScanningForLifeForms) {
+        setFoundLifeForms((lifeforms) => {
+          if (lifeforms.length === soughtLifeformCount && intervalRef.current) {
+            clearInterval(intervalRef.current);
+          }
+          return lifeforms.length < soughtLifeformCount
+            ? [...lifeforms, Math.random()]
+            : lifeforms;
+        });
+      }
+    }, 1000 * multipliers);
+    intervalRef.current = interval;
+    return () => {
+      clearInterval(interval);
+    };
+  }, [isScanningForLifeForms, config, soughtLifeformCount]);
 
+  /**
+   * Update the page title with the number of found lifeforms when the array chnges
+   */
   useEffect(() => {
     document.title = "Found lifeforms: " + foundLifeforms.length;
-  });
+  }, [foundLifeforms]);
 
-  const [titleSet, setTitleSet] = useState(false);
-
+  /**
+   * Set the config in local storage
+   */
   useEffect(() => {
-    if (titleSet === false) {
-      document.title = "Found lifeforms: " + foundLifeforms.length;
-    }
-  }, [titleSet, foundLifeforms.length]);
+    localStorage.setItem("__tricorder__configuration", JSON.stringify(config));
+  }, [config]);
 
-  const [config, setConfig] = useState<{
-    antimatter?: boolean;
-    slingshot?: boolean;
-    stembolts?: boolean;
-  }>();
-
-  const CheckConfigurationComponent = (tricorderConfig: typeof config) => {
-    if (
-      tricorderConfig?.antimatter &&
-      tricorderConfig?.slingshot &&
-      tricorderConfig?.stembolts
-    ) {
-      return <div>👍👍</div>;
-    }
-    return (
-      <div>
-        🙃{" "}
-        {Object.keys(config ? config : {})
-          .filter(
-            (configItem) => ((config as any)[configItem as any] as any) === true
-          )
-          .map((a) => `${a} on`)
-          .join(", ")}
-      </div>
+  /*
+   * Load the configuration from local storage, then set it in state
+   */
+  useEffect(() => {
+    const newConfiguration = JSON.parse(
+      localStorage.getItem("__tricorder_configuration") ?? "{}"
     );
-  };
-
-  function CheckNumberOfLifeformsIsCorrect({
-    lifeforms,
-  }: {
-    lifeforms: number[];
-  }) {
-    return lifeforms.length === 47 ? (
-      <div className="text-3xl text-green-700 p-64">47 lifeforms found!</div>
-    ) : (
-      <></>
-    );
-  }
+    setConfig(newConfiguration);
+  }, []);
 
   return (
     <div>
-      <Counter
-        count={
-          typeof document === "undefined" ? "" : document?.title?.match(/\d+/)
-        }
-      />
-      <CheckNumberOfLifeformsIsCorrect
-        lifeforms={foundLifeforms as any as unknown as number[]}
-      />
-      <CheckConfigurationComponent />
+      <Counter count={foundLifeforms.length} />
+      <CheckNumberOfLifeformsIsCorrect lifeforms={foundLifeforms} />
+      <ConfigurationDisplay config={config} />
       <div>
-        <Configure onChange={setConfig} />
+        <Configure
+          config={config}
+          onChange={(key, value) =>
+            setConfig((oldConfig) => ({ ...oldConfig, [key]: value }))
+          }
+        />
       </div>
-      <pre>{JSON.stringify(config)}</pre>
       <button
         className="m-4 p-4 rounded-full bg-red-900 font-bold text-white"
         onClick={() => {
-          if (isScanningForLifeForms) {
-            setScanForLifeFormsToFalse();
-          } else {
-            setScanForLifeFormsToTrue();
+          if (isScanningForLifeForms && intervalRef) {
+            setIsScanningForLifeforms(false);
+            clearInterval(intervalRef.current);
+          } else if (!isScanningForLifeForms) {
+            setIsScanningForLifeforms(true);
           }
         }}
       >
@@ -100,11 +90,7 @@ function Tricorder(props: any) {
       <button
         className="m-4 p-4 rounded-full bg-red-900 font-bold text-white"
         onClick={() => {
-          const newFoundLifeforms = foundLifeforms;
-          newFoundLifeforms.map((_: any, idx: string) => {
-            delete newFoundLifeforms[idx as any as number];
-          });
-          setFoundLifeForms(newFoundLifeforms);
+          setFoundLifeForms([]);
         }}
       >
         Clear found lifeforms
@@ -121,14 +107,26 @@ function Tricorder(props: any) {
       </div>
       <div>
         <ul>
-          {foundLifeforms.map((lifeform: string, idx: string) => (
-            <li key={lifeform}>
+          {foundLifeforms.map((lifeform, idx) => (
+            <li key={idx}>
               {idx}: {lifeform}
             </li>
           ))}
         </ul>
       </div>
     </div>
+  );
+}
+
+function CheckNumberOfLifeformsIsCorrect({
+  lifeforms,
+}: {
+  lifeforms: number[];
+}) {
+  return lifeforms.length === 47 ? (
+    <div className="text-3xl text-green-700 p-64">47 lifeforms found!</div>
+  ) : (
+    <></>
   );
 }
 
