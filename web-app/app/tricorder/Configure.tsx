@@ -1,52 +1,53 @@
-import { useEffect } from "react";
-import { buttonClass } from "./classes";
+export type Config = {
+  antimatter?: boolean;
+  slingshot?: boolean;
+  stembolts?: boolean;
+};
 
-export function Configure(props: any) {
-  const onChange = props.onChange;
-  const configuration: Record<any, any> = {};
-  useEffect(() => {
-    localStorage.setItem(
-      "__tricorder__configuration",
-      JSON.stringify(configuration)
-    );
-  }, [configuration]);
-  useEffect(() => {
-    const newConfiguration = JSON.parse(
-      localStorage.getItem("__tricorder_configuration") ?? "{}"
-    );
-    Object.keys(newConfiguration).map((configKey) => {
-      configuration[configKey] = newConfiguration[configKey];
-    });
-  }, []);
+export default function Configure({
+  config,
+  onChange,
+}: {
+  config: Config;
+  onChange: (configKey: keyof Config, value: boolean) => void;
+}) {
   return (
     <div>
       <button
-        className={buttonClass}
+        className={`lcars-button ${config["slingshot"] ? "on" : ""}`}
         onClick={() => {
-          configuration.slingshot = true;
-          onChange(configuration);
+          onChange("slingshot", !config.slingshot);
         }}
       >
         Initiate slingshot effect
       </button>
       <button
-        className={buttonClass}
+        className={`lcars-button ${config["stembolts"] ? "on" : ""}`}
         onClick={() => {
-          configuration.stembolts = true;
-          onChange(configuration);
+          onChange("stembolts", !config.stembolts);
         }}
       >
         Distribute self-sealing stem bolts
       </button>
       <button
-        className={buttonClass}
+        className={`lcars-button ${config["antimatter"] ? "on" : ""}`}
         onClick={() => {
-          configuration.antimatter = true;
-          onChange(configuration);
+          onChange("antimatter", !config.antimatter);
         }}
       >
         Initiate antimatter reactor
       </button>
+    </div>
+  );
+}
+
+export function ConfigurationDisplay({ config }: { config: Config }) {
+  return (
+    <div>
+      {Object.keys(config)
+        .filter((configItem) => config[configItem as keyof Config] === true)
+        .map((a) => `${a} on`)
+        .join(", ")}
     </div>
   );
 }
