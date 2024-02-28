@@ -4,7 +4,7 @@ export type Config = {
   stembolts?: boolean;
 };
 
-export function Configure({
+export default function Configure({
   config,
   onChange,
 }: {

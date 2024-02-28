@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Counter from "./Counter";
-import { Config, ConfigurationDisplay, Configure } from "./Configure";
+import Configure, { Config, ConfigurationDisplay } from "./Configure";
 
-function Tricorder(props: any) {
+function Tricorder() {
   const [config, setConfig] = useState<Config>({});
   const [isScanningForLifeForms, setIsScanningForLifeforms] =
     useState<boolean>();
